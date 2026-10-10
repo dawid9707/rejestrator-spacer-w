@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="md_green">#2E7D32</color>
+    <color name="md_green_light">#66BB6A</color>
+    <color name="md_green_dark">#1B5E20</color>
+    <color name="white">#FFFFFF</color>
+</resources>
