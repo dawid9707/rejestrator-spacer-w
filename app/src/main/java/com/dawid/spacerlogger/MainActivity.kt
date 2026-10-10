@@ -26,7 +26,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvTime: TextView
     private lateinit var tvCalories: TextView
     private lateinit var etWeight: EditText
-    private lateinit var btnToggle: Button
+    private lateinit var btnStart: Button
+    private lateinit var btnPause: Button
+    private lateinit var btnEnd: Button
+    private lateinit var btnLocate: Button
     private var routeLine: Polyline? = null
     private val uiHandler = Handler(Looper.getMainLooper())
 
@@ -47,18 +50,77 @@ class MainActivity : AppCompatActivity() {
         tvTime = findViewById(R.id.tvTime)
         tvCalories = findViewById(R.id.tvCalories)
         etWeight = findViewById(R.id.etWeight)
-        btnToggle = findViewById(R.id.btnToggle)
+        btnStart = findViewById(R.id.btnStart)
+        btnPause = findViewById(R.id.btnPause)
+        btnEnd = findViewById(R.id.btnEnd)
+        btnLocate = findViewById(R.id.btnLocate)
 
         map.setTileSource(TileSourceFactory.MAPNIK)
         map.setMultiTouchControls(true)
         map.controller.setZoom(17.0)
-        map.controller.setCenter(GeoPoint(52.23, 21.01))
+        map.controller.setCenter(GeoPoint(52.23, 21.01)) // Warszawa
 
-        btnToggle.setOnClickListener { toggleTracking() }
+        btnStart.setOnClickListener { startWalk() }
+        btnPause.setOnClickListener { togglePause() }
+        btnEnd.setOnClickListener { endWalk() }
+        btnLocate.setOnClickListener { centerOnMyLocation() }
 
         requestNeededPermissions()
         updateUi()
+        updateButtons()
         uiHandler.postDelayed(uiUpdater, 1000)
+    }
+
+    private fun startWalk() {
+        if (WalkSession.isTracking.get()) return
+        val weight = etWeight.text.toString().toFloatOrNull() ?: 70f
+        WalkService.start(this, weight)
+        updateButtons()
+    }
+
+    private fun togglePause() {
+        if (!WalkSession.isTracking.get()) return
+        if (WalkSession.isPaused()) WalkService.resume(this)
+        else WalkService.pause(this)
+        updateButtons()
+    }
+
+    private fun endWalk() {
+        if (!WalkSession.isTracking.get()) return
+        WalkService.stop(this)
+        saveWalkToHistory()
+        updateButtons()
+    }
+
+    /** „Zlokalizuj” — wyśrodkuj mapę na ostatniej znanej pozycji GPS. */
+    private fun centerOnMyLocation() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestNeededPermissions()
+            return
+        }
+        val lm = getSystemService(LOCATION_SERVICE) as android.location.LocationManager
+        var best: android.location.Location? = null
+        for (provider in lm.getProviders(true)) {
+            val loc = lm.getLastKnownLocation(provider) ?: continue
+            if (best == null || loc.time > best.time) best = loc
+        }
+        if (best != null) {
+            map.controller.animateTo(GeoPoint(best.latitude, best.longitude))
+            map.controller.setZoom(17.0)
+        } else {
+            Toast.makeText(this, R.string.no_fix, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun updateButtons() {
+        val tracking = WalkSession.isTracking.get()
+        btnStart.isEnabled = !tracking
+        btnPause.isEnabled = tracking
+        btnEnd.isEnabled = tracking
+        btnPause.text = if (WalkSession.isPaused())
+            getString(R.string.resume) else getString(R.string.pause)
     }
 
     private fun requestNeededPermissions() {
@@ -75,21 +137,9 @@ class MainActivity : AppCompatActivity() {
         else permissionLauncher.launch(missing.toTypedArray())
     }
 
-    private fun onPermissionsGranted() { }
+    private fun onPermissionsGranted() { /* gotowe do startu */ }
 
-    private fun toggleTracking() {
-        if (WalkSession.isTracking.get()) {
-            WalkService.stop(this)
-            btnToggle.text = getString(R.string.start)
-            saveWalkToHistory()
-        } else {
-            val weight = etWeight.text.toString().toFloatOrNull() ?: 70f
-            WalkService.start(this, weight)
-            btnToggle.text = getString(R.string.stop)
-        }
-        refreshRoute()
-    }
-
+    /** Prosty zapis podsumowania spaceru do SharedPreferences. */
     private fun saveWalkToHistory() {
         val prefs = getSharedPreferences("walks", MODE_PRIVATE)
         val history = prefs.getString("history", "") ?: ""
@@ -121,7 +171,8 @@ class MainActivity : AppCompatActivity() {
     private val uiUpdater = object : Runnable {
         override fun run() {
             updateUi()
-            refreshRoute()
+            updateButtons()
+            if (WalkSession.isTracking.get()) refreshRoute()
             uiHandler.postDelayed(this, 1000)
         }
     }
@@ -136,9 +187,6 @@ class MainActivity : AppCompatActivity() {
         val m = (elapsed % 3_600_000) / 60_000
         val s = (elapsed % 60_000) / 1000
         tvTime.text = getString(R.string.time).format(h, m, s)
-
-        if (btnToggle.text.isEmpty() || !WalkSession.isTracking.get())
-            btnToggle.text = getString(R.string.start)
     }
 
     override fun onResume() {
