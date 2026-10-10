@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SpacerLogger</string>
-    <string name="start">Start spaceru</string>
-    <string name="stop">Zakończ spacer</string>
+    <string name="start">Start</string>
+    <string name="pause">Pauza</string>
+    <string name="resume">Kontynuuj</string>
+    <string name="end">Koniec</string>
+    <string name="locate">Zlokalizuj</string>
+    <string name="no_fix">Brak ostatniej lokalizacji — włącz GPS i spróbuj ponownie</string>
     <string name="distance">Dystans: %.2f km</string>
     <string name="time">Czas: %02d:%02d:%02d</string>
     <string name="calories">Spalone kalorie: %.0f kcal</string>
@@ -11,6 +15,7 @@
     <string name="notif_title">SpacerLogger</string>
     <string name="notif_text">Rejestracja trasy spaceru…</string>
     <string name="notif_progress">Dystans: %.2f km</string>
+    <string name="notif_paused">Spacer wstrzymany</string>
     <string name="history_entry">— %s | %.2f km | %.0f kcal</string>
     <string name="walk_saved">Spacer zapisany w historii</string>
 </resources>
