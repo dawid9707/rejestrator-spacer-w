@@ -12,19 +12,48 @@ object WalkSession {
     val distanceMeters = AtomicLong(0L)
     val startTimeMillis = AtomicLong(0L)
     val isTracking = AtomicBoolean(false)
+    val paused = AtomicBoolean(false)
+    val accumulatedMillis = AtomicLong(0L)
+    val finalMillis = AtomicLong(0L)
     @Volatile var weightKg: Float = 70f
 
     fun start(weight: Float) {
         synchronized(points) { points.clear() }
         distanceMeters.set(0)
         startTimeMillis.set(System.currentTimeMillis())
+        accumulatedMillis.set(0L)
+        finalMillis.set(0L)
+        paused.set(false)
         weightKg = weight
         isTracking.set(true)
     }
 
     fun stop() {
+        if (isTracking.get()) {
+            if (paused.get()) finalMillis.set(accumulatedMillis.get())
+            else finalMillis.set(
+                accumulatedMillis.get() + (System.currentTimeMillis() - startTimeMillis.get())
+            )
+        }
         isTracking.set(false)
+        paused.set(false)
     }
+
+    fun pause() {
+        if (isTracking.get() && !paused.get()) {
+            accumulatedMillis.addAndGet(System.currentTimeMillis() - startTimeMillis.get())
+            paused.set(true)
+        }
+    }
+
+    fun resume() {
+        if (isTracking.get() && paused.get()) {
+            startTimeMillis.set(System.currentTimeMillis())
+            paused.set(false)
+        }
+    }
+
+    fun isPaused(): Boolean = paused.get()
 
     fun addPoint(point: GeoPoint, addedMeters: Double) {
         synchronized(points) { points.add(point) }
@@ -32,8 +61,9 @@ object WalkSession {
     }
 
     fun elapsedMillis(): Long =
-        if (isTracking.get()) System.currentTimeMillis() - startTimeMillis.get()
-        else 0L
+        if (!isTracking.get()) finalMillis.get()
+        else if (paused.get()) accumulatedMillis.get()
+        else accumulatedMillis.get() + (System.currentTimeMillis() - startTimeMillis.get())
 
     /** Kalorie wg wzoru MET: kcal = MET * masa(kg) * czas(h). MET chodu = 3.5. */
     fun calories(): Double {
