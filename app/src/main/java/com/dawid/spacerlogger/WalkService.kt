@@ -9,6 +9,7 @@ import android.content.Intent
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import org.osmdroid.util.GeoPoint
@@ -26,6 +27,15 @@ class WalkService : Service() {
                 stopSelf()
                 return START_NOT_STICKY
             }
+            ACTION_PAUSE -> {
+                WalkSession.pause()
+                stopLocationUpdates()
+                updateNotificationPaused()
+            }
+            ACTION_RESUME -> {
+                WalkSession.resume()
+                startLocationUpdates()
+            }
             else -> {
                 val weight = intent?.getFloatExtra(EXTRA_WEIGHT, 70f) ?: 70f
                 WalkSession.start(weight)
@@ -41,8 +51,8 @@ class WalkService : Service() {
         try {
             lm.requestLocationUpdates(
                 LocationManager.GPS_PROVIDER,
-                2000L,
-                2f,
+                2000L,   // co 2 sekundy
+                2f,      // co 2 metry
                 locationListener
             )
         } catch (_: SecurityException) {
@@ -55,6 +65,7 @@ class WalkService : Service() {
         val last = lastPoint
         if (last != null) {
             val d = WalkSession.haversine(last, point)
+            // Filtr GPS-owego szumu: ignoruj skoki < 1 m i > 100 m między pomiarami
             if (d >= 1.0 && d <= 100.0) {
                 WalkSession.addPoint(point, d)
                 lastPoint = point
@@ -64,6 +75,21 @@ class WalkService : Service() {
             lastPoint = point
         }
         updateNotification()
+    }
+
+    private fun stopLocationUpdates() {
+        val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        try { lm.removeUpdates(locationListener) } catch (_: Exception) {}
+    }
+
+    private fun updateNotificationPaused() {
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.notify(NOTIF_ID, NotificationCompat.Builder(this, channel())
+            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+            .setContentTitle(getString(R.string.notif_title))
+            .setContentText(getString(R.string.notif_paused))
+            .setOngoing(true)
+            .build())
     }
 
     private fun channel(): String {
@@ -98,13 +124,14 @@ class WalkService : Service() {
     }
 
     override fun onDestroy() {
-        val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        try { lm.removeUpdates(locationListener) } catch (_: Exception) {}
+        stopLocationUpdates()
         super.onDestroy()
     }
 
     companion object {
         const val ACTION_STOP = "com.dawid.spacerlogger.STOP"
+        const val ACTION_PAUSE = "com.dawid.spacerlogger.PAUSE"
+        const val ACTION_RESUME = "com.dawid.spacerlogger.RESUME"
         const val EXTRA_WEIGHT = "weight"
         const val NOTIF_ID = 1
 
@@ -117,6 +144,18 @@ class WalkService : Service() {
         fun stop(context: Context) {
             context.startService(
                 Intent(context, WalkService::class.java).setAction(ACTION_STOP)
+            )
+        }
+
+        fun pause(context: Context) {
+            context.startService(
+                Intent(context, WalkService::class.java).setAction(ACTION_PAUSE)
+            )
+        }
+
+        fun resume(context: Context) {
+            context.startService(
+                Intent(context, WalkService::class.java).setAction(ACTION_RESUME)
             )
         }
     }
