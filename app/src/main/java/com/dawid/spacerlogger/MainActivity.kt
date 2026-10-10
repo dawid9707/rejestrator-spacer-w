@@ -7,7 +7,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.widget.Button
-import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,7 +24,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvDistance: TextView
     private lateinit var tvTime: TextView
     private lateinit var tvCalories: TextView
-    private lateinit var etWeight: EditText
+    private lateinit var etWeight: com.google.android.material.textfield.TextInputEditText
     private lateinit var btnStart: Button
     private lateinit var btnPause: Button
     private lateinit var btnEnd: Button
@@ -44,6 +43,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         Configuration.getInstance().userAgentValue = packageName
         setContentView(R.layout.activity_main)
+
+        setSupportActionBar(findViewById(R.id.toolbar))
 
         map = findViewById(R.id.map)
         tvDistance = findViewById(R.id.tvDistance)
