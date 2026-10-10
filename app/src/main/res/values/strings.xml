@@ -7,9 +7,12 @@
     <string name="end">Koniec</string>
     <string name="locate">Zlokalizuj</string>
     <string name="no_fix">Brak ostatniej lokalizacji — włącz GPS i spróbuj ponownie</string>
-    <string name="distance">Dystans: %.2f km</string>
-    <string name="time">Czas: %02d:%02d:%02d</string>
-    <string name="calories">Spalone kalorie: %.0f kcal</string>
+    <string name="distance">%.2f km</string>
+    <string name="time">%02d:%02d:%02d</string>
+    <string name="calories">%.0f kcal</string>
+    <string name="label_distance">Dystans</string>
+    <string name="label_time">Czas</string>
+    <string name="label_calories">Kalorie</string>
     <string name="weight_hint">Waga (kg)</string>
     <string name="perm_needed">Bez uprawnień lokalizacji rejestracja trasy nie działa.</string>
     <string name="notif_title">SpacerLogger</string>
